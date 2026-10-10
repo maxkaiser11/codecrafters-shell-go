@@ -132,15 +132,17 @@ func changeDirectory(path string) {
 func parseArgs(line string) []string {
 	var args []string
 	var cur strings.Builder
-	inQuotes := false
+	var quote rune
 	hasToken := false
 
 	for _, r := range line {
 		switch {
-		case r == '\'':
-			inQuotes = !inQuotes
+		case quote == 0 && (r == '\'' || r == '"'):
+			quote = r // open quote
 			hasToken = true
-		case r == ' ' && !inQuotes:
+		case r == quote:
+			quote = 0 // close quote
+		case r == ' ' && quote == 0:
 			if hasToken {
 				args = append(args, cur.String())
 				cur.Reset()
@@ -151,6 +153,7 @@ func parseArgs(line string) []string {
 			hasToken = true
 		}
 	}
+
 	if hasToken {
 		args = append(args, cur.String())
 	}

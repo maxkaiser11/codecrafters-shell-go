@@ -106,8 +106,12 @@ func printWorkingDirectory() {
 }
 
 func changeDirectory(path string) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Could not get home directory")
+	}
 	if path == "~" {
-		if err := os.Chdir("/"); err != nil {
+		if err := os.Chdir(homeDir); err != nil {
 			fmt.Printf("Cannot change current working directory: %s\n", err)
 		}
 	} else {

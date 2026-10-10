@@ -14,6 +14,7 @@ var builtins = map[string]bool{
 	"exit": true,
 	"type": true,
 	"pwd":  true,
+	"cd":   true,
 }
 
 func main() {
@@ -51,6 +52,8 @@ func main() {
 			}
 		case "pwd":
 			printWorkingDirectory()
+		case "cd":
+			changeDirectory(args[0])
 		default:
 			if _, err := exec.LookPath(name); err != nil {
 				fmt.Printf("%s: command not found\n", name)
@@ -100,4 +103,10 @@ func printWorkingDirectory() {
 		log.Print("Could not get current working directory")
 	}
 	fmt.Println(pwd)
+}
+
+func changeDirectory(path string) {
+	if err := os.Chdir(path); err != nil {
+		fmt.Printf("cd: %s: No such file or directory\n", path)
+	}
 }

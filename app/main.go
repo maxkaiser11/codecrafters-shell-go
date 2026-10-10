@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 )
 
-type Builtin struct {
-	Echo string
-	Exit string
+var builtins = map[string]bool{
+	"echo": true,
+	"exit": true,
+	"type": true,
 }
-
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Print
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
+
 	for {
 		fmt.Print("$ ")
 		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -35,7 +35,7 @@ func main() {
 			if checkType(command[5:]) {
 				fmt.Println(command[5:] + " is a shell builtin")
 			} else {
-				fmt.Printf("%s: not found\n", command[5:])
+				checkPATH(command[5:])
 			}
 		} else {
 			fmt.Printf("%s: command not found\n", command)
@@ -46,8 +46,15 @@ func main() {
 }
 
 func checkType(command string) bool {
-	if command == "echo" || command == "exit" || command == "type" {
-		return true
+	return builtins[command]
+}
+
+func checkPATH(name string) {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		fmt.Printf("%s: not found\n", name)
+		return
 	}
-	return false
+	fmt.Printf("%s is %s\n", name, path)
+
 }

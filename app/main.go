@@ -13,6 +13,7 @@ var builtins = map[string]bool{
 	"echo": true,
 	"exit": true,
 	"type": true,
+	"pwd":  true,
 }
 
 func main() {

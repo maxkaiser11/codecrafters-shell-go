@@ -46,7 +46,7 @@ func main() {
 }
 
 func checkType(command string) bool {
-	if command == "echo" || command == "exit" {
+	if command == "echo" || command == "exit" || command == "type" {
 		return true
 	}
 	return false

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -47,6 +48,8 @@ func main() {
 			} else {
 				checkPATH(args[0])
 			}
+		case "pwd":
+			printWorkingDirectory()
 		default:
 			if _, err := exec.LookPath(name); err != nil {
 				fmt.Printf("%s: command not found\n", name)
@@ -88,4 +91,12 @@ func execCommand(command string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func printWorkingDirectory() {
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Print("Could not get current working directory")
+	}
+	fmt.Println(pwd)
 }

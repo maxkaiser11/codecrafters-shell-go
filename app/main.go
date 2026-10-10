@@ -106,7 +106,13 @@ func printWorkingDirectory() {
 }
 
 func changeDirectory(path string) {
-	if err := os.Chdir(path); err != nil {
-		fmt.Printf("cd: %s: No such file or directory\n", path)
+	if path == "~" {
+		if err := os.Chdir("/"); err != nil {
+			fmt.Printf("Cannot change current working directory: %s\n", err)
+		}
+	} else {
+		if err := os.Chdir(path); err != nil {
+			fmt.Printf("cd: %s: No such file or directory\n", path)
+		}
 	}
 }

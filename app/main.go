@@ -28,18 +28,26 @@ func main() {
 		if err != nil {
 			os.Exit(0)
 		}
+		line = strings.TrimSpace(line)
 
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			continue
+		tokens := parseArgs(line)
+		if len(tokens) == 0 {
+			return
 		}
 
-		name, args := fields[0], fields[1:]
+		cmd, args := tokens[0], tokens[1:]
 
-		switch name {
+		switch cmd {
 		case "exit":
 			os.Exit(0)
 		case "echo":
+			if len(args) > 0 &&
+				strings.HasPrefix(args[0], "'") &&
+				strings.HasSuffix(args[len(args)-1], "'") &&
+				!(len(args) == 1 && args[0] == "'") {
+				// quoted
+				fmt.Println(strings.Join(args, " "))
+			}
 			fmt.Println(strings.Join(args, " "))
 		case "type":
 			if len(args) == 0 {
@@ -55,11 +63,11 @@ func main() {
 		case "cd":
 			changeDirectory(args[0])
 		default:
-			if _, err := exec.LookPath(name); err != nil {
-				fmt.Printf("%s: command not found\n", name)
+			if _, err := exec.LookPath(cmd); err != nil {
+				fmt.Printf("%s: command not found\n", cmd)
 				continue
 			}
-			if err := execCommand(name, args...); err != nil {
+			if err := execCommand(cmd, args...); err != nil {
 				_ = err
 			}
 		}
@@ -119,4 +127,32 @@ func changeDirectory(path string) {
 			fmt.Printf("cd: %s: No such file or directory\n", path)
 		}
 	}
+}
+
+func parseArgs(line string) []string {
+	var args []string
+	var cur strings.Builder
+	inQuotes := false
+	hasToken := false
+
+	for _, r := range line {
+		switch {
+		case r == '\'':
+			inQuotes = !inQuotes
+			hasToken = true
+		case r == ' ' && !inQuotes:
+			if hasToken {
+				args = append(args, cur.String())
+				cur.Reset()
+				hasToken = false
+			}
+		default:
+			cur.WriteRune(r)
+			hasToken = true
+		}
+	}
+	if hasToken {
+		args = append(args, cur.String())
+	}
+	return args
 }

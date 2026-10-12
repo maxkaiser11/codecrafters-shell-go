@@ -18,7 +18,6 @@ var builtins = map[string]bool{
 }
 
 func main() {
-	// TODO: Uncomment the code below to pass the first stage
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -41,19 +40,12 @@ func main() {
 		case "exit":
 			os.Exit(0)
 		case "echo":
-			if len(args) > 0 &&
-				strings.HasPrefix(args[0], "'") &&
-				strings.HasSuffix(args[len(args)-1], "'") &&
-				!(len(args) == 1 && args[0] == "'") {
-				// quoted
-				fmt.Println(strings.Join(args, " "))
-			}
 			fmt.Println(strings.Join(args, " "))
 		case "type":
 			if len(args) == 0 {
 				continue
 			}
-			if builtins[args[0]] {
+			if checkType(args[0]) {
 				fmt.Println(args[0] + " is a shell builtin")
 			} else {
 				checkPATH(args[0])
@@ -134,9 +126,16 @@ func parseArgs(line string) []string {
 	var cur strings.Builder
 	var quote rune
 	hasToken := false
+	escaped := false
 
 	for _, r := range line {
 		switch {
+		case escaped:
+			cur.WriteRune(r)
+			hasToken =true
+			escaped = false
+		case r == '\\' && quote == 0:
+			escaped = true
 		case quote == 0 && (r == '\'' || r == '"'):
 			quote = r // open quote
 			hasToken = true

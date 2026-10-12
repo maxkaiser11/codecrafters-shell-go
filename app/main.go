@@ -131,10 +131,13 @@ func parseArgs(line string) []string {
 	for _, r := range line {
 		switch {
 		case escaped:
+			if quote == '"' && r != '"' && r != '\\' {
+				cur.WriteRune('\\')
+			}
 			cur.WriteRune(r)
 			hasToken =true
 			escaped = false
-		case r == '\\' && quote == 0:
+		case r == '\\' && (quote == 0 || quote == '"'):
 			escaped = true
 		case quote == 0 && (r == '\'' || r == '"'):
 			quote = r // open quote

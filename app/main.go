@@ -3,22 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
 	"strings"
 )
 
-var builtins = map[string]bool{
-	"echo": true,
-	"exit": true,
-	"type": true,
-	"pwd":  true,
-	"cd":   true,
-}
-
 func main() {
-
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -27,137 +16,38 @@ func main() {
 		if err != nil {
 			os.Exit(0)
 		}
-		line = strings.TrimSpace(line)
 
-		tokens := parseArgs(line)
+		tokens := parseArgs(strings.TrimSpace(line))
 		if len(tokens) == 0 {
-			return
+			continue
 		}
 
-		cmd, args := tokens[0], tokens[1:]
-
-		switch cmd {
-		case "exit":
-			os.Exit(0)
-		case "echo":
-			fmt.Println(strings.Join(args, " "))
-		case "type":
-			if len(args) == 0 {
-				continue
-			}
-			if checkType(args[0]) {
-				fmt.Println(args[0] + " is a shell builtin")
-			} else {
-				checkPATH(args[0])
-			}
-		case "pwd":
-			printWorkingDirectory()
-		case "cd":
-			changeDirectory(args[0])
-		default:
-			if _, err := exec.LookPath(cmd); err != nil {
-				fmt.Printf("%s: command not found\n", cmd)
-				continue
-			}
-			if err := execCommand(cmd, args...); err != nil {
-				_ = err
-			}
-		}
+		run(tokens)
 	}
 }
 
-func checkType(command string) bool {
-	return builtins[command]
-}
-
-func checkPATH(name string) {
-	path, err := exec.LookPath(name)
+// run applies any redirection, then dispatches to a builtin or an external program.
+func run(tokens []string) {
+	args, outFile, err := parseRedirects(tokens)
 	if err != nil {
-		fmt.Printf("%s: not found\n", name)
+		fmt.Fprintln(os.Stderr, "shell:", err)
 		return
 	}
-	fmt.Printf("%s is %s\n", name, path)
+	if len(args) == 0 {
+		return
+	}
 
-}
-
-func checkIfExecutable(name string) bool {
-	path, err := exec.LookPath(name)
+	stdout, closeOut, err := openOutput(outFile)
 	if err != nil {
-		return false
+		fmt.Fprintln(os.Stderr, "shell:", err)
+		return
 	}
-	fmt.Printf("%s\n", path)
-	return true
-}
+	defer closeOut()
 
-func execCommand(command string, args ...string) error {
-	cmd := exec.Command(command, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func printWorkingDirectory() {
-	pwd, err := os.Getwd()
-	if err != nil {
-		log.Print("Could not get current working directory")
+	name, rest := args[0], args[1:]
+	if fn, ok := builtins[name]; ok {
+		fn(rest, stdout)
+		return
 	}
-	fmt.Println(pwd)
-}
-
-func changeDirectory(path string) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Could not get home directory")
-	}
-	if path == "~" {
-		if err := os.Chdir(homeDir); err != nil {
-			fmt.Printf("Cannot change current working directory: %s\n", err)
-		}
-	} else {
-		if err := os.Chdir(path); err != nil {
-			fmt.Printf("cd: %s: No such file or directory\n", path)
-		}
-	}
-}
-
-func parseArgs(line string) []string {
-	var args []string
-	var cur strings.Builder
-	var quote rune
-	hasToken := false
-	escaped := false
-
-	for _, r := range line {
-		switch {
-		case escaped:
-			if quote == '"' && r != '"' && r != '\\' {
-				cur.WriteRune('\\')
-			}
-			cur.WriteRune(r)
-			hasToken =true
-			escaped = false
-		case r == '\\' && (quote == 0 || quote == '"'):
-			escaped = true
-		case quote == 0 && (r == '\'' || r == '"'):
-			quote = r // open quote
-			hasToken = true
-		case r == quote:
-			quote = 0 // close quote
-		case r == ' ' && quote == 0:
-			if hasToken {
-				args = append(args, cur.String())
-				cur.Reset()
-				hasToken = false
-			}
-		default:
-			cur.WriteRune(r)
-			hasToken = true
-		}
-	}
-
-	if hasToken {
-		args = append(args, cur.String())
-	}
-	return args
+	runExternal(name, rest, stdout)
 }
